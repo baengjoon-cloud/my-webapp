@@ -1,11 +1,115 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <title>내 첫 웹앱</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>매장 실시간 공지 (텍스트 모드)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+        body { 
+            font-family: 'Noto Sans KR', sans-serif; 
+            background-color: #ffffff; 
+            color: #000000;
+            word-break: keep-all;
+        }
+        /* 불필요한 장식 제거, 오직 간격과 크기만 조절 */
+        .section {
+            margin-bottom: 50px;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 20px;
+        }
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #666666;
+            margin-bottom: 15px;
+            text-decoration: underline;
+        }
+        .content-body {
+            font-size: 2rem;
+            line-height: 1.4;
+            font-weight: 500;
+        }
+        .urgent-text {
+            font-weight: 900;
+        }
+    </style>
 </head>
-<body>
-  <h1>웹 자동 게시 성공 🎉</h1>
-  <p>이 화면이 보이면 GitHub Pages 정상 작동입니다.</p>
+<body class="p-10 md:p-20">
+    <div class="max-w-4xl mx-auto">
+        
+        <!-- 날짜 및 시간 정보 -->
+        <div class="flex justify-between items-baseline mb-16">
+            <div>
+                <h1 id="currentDate" class="text-xl font-medium text-gray-500">2026년 1월 29일</h1>
+                <h2 class="text-5xl font-black mt-1">매장 업무 공지</h2>
+            </div>
+            <div class="text-right">
+                <p id="clock" class="text-4xl font-mono">14:05:00</p>
+            </div>
+        </div>
+
+        <!-- 1. 당장 (긴급/중요) -->
+        <div class="section">
+            <p class="section-title">■ 당장 확인 (긴급)</p>
+            <div id="urgentContent" class="content-body urgent-text">
+                - 포스기 정산 오류 주의 (영수증 이중 출력 확인)<br>
+                - 주방 배수구 청소 금일 마감 전 필수 완료
+            </div>
+        </div>
+
+        <!-- 2. 이번 주 공지 -->
+        <div class="section">
+            <p class="section-title">■ 이번 주 업무</p>
+            <div id="thisWeekContent" class="content-body">
+                - 설 연휴 대비 식자재 재고 파악 진행<br>
+                - 신규 근무자 교육 매뉴얼 숙지
+            </div>
+        </div>
+
+        <!-- 3. 다음 주 예고 -->
+        <div class="section">
+            <p class="section-title">■ 다음 주 예정</p>
+            <div id="nextWeekContent" class="content-body">
+                - 2월 신메뉴 홍보물 부착 예정<br>
+                - 매장 전체 방역 소독 (화요일 오전)
+            </div>
+        </div>
+
+        <!-- 4. 체크리스트 -->
+        <div class="section">
+            <p class="section-title">■ 오늘의 할 일</p>
+            <div id="todoContent" class="content-body space-y-4">
+                <div class="flex items-center gap-4">
+                    <span>[ ]</span> <span>유통기한 라벨 전체 점검</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span>[ ]</span> <span>분리수거함 비우기</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 하단 푸터 -->
+        <div class="mt-32 text-center text-gray-400">
+            <p class="text-lg">"오늘도 원칙을 준수하며 안전하게 근무합시다."</p>
+            <p class="text-xs mt-4">최종 업데이트: 2026-01-29 14:05</p>
+        </div>
+    </div>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('clock').innerText = `${hours}:${minutes}:${seconds}`;
+            
+            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            document.getElementById('currentDate').innerText = now.toLocaleDateString('ko-KR', options);
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
 </body>
 </html>
