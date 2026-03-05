@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>재료 준비 차트</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif;
+            background: #f5f5f5;
+            padding: 10px;
+            font-size: 13px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+        }
+        
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+        }
+        
+        .header-date {
+            font-size: 16px;
+            font-weight: 600;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 6px;
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .holiday-check {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .holiday-check input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .calc-mode-selector {
+            display: flex;
+            gap: 5px;
+            background: rgba(255,255,255,0.2);
+            padding: 4px;
+            border-radius: 6px;
+        }
+        
+        .calc-mode-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: transparent;
+            color: rgba(255,255,255,0.7);
+        }
+        
+        .calc-mode-btn.active {
+            background: white;
+            color: #667eea;
+        }
+        
+        .calc-mode-btn:hover {
+            background: rgba(255,255,255,0.3);
+            color: white;
+        }
+        
+        .calc-mode-btn.active:hover {
+            background: white;
+            color: #667eea;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: white;
+            color: #667eea;
+        }
+        
+        .btn-primary:hover {
+            background: #f0f0f0;
+        }
+        
+        .btn-secondary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #229954;
+        }
+        
+        .section {
+            padding: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .section:last-child {
+            border-bottom: none;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: #667eea;
+            border-radius: 2px;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1000px;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px 6px;
+            text-align: center;
+            font-size: 12px;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            padding: 10px 6px;
+            line-height: 1.3;
+        }
+        
+        .item-name {
+            font-weight: 600;
+            color: #2c3e50;
+            text-align: left;
+            min-width: 100px;
+        }
+        
+        .item-name input {
+            width: 100%;
+            border: 1px solid transparent;
+            padding: 4px;
+            background: transparent;
+            font-weight: 600;
+        }
+        
+        .item-name input:focus {
+            border-color: #667eea;
+            background: white;
+            outline: none;
+        }
+        
+        .note-cell {
+            font-size: 11px;
+            color: #666;
+            min-width: 80px;
+            max-width: 120px;
+            vertical-align: top;
+        }
+        
+        .note-cell input {
+            width: 100%;
+            border: 1px solid transparent;
+            padding: 4px;
+            background: transparent;
+            font-size: 11px;
+            color: #666;
+        }
+        
+        .note-cell input:focus {
+            border-color: #667eea;
+            background: white;
+            outline: none;
+        }
+        
+        .water-tray {
+            font-weight: 600;
+        }
+        
+        .water-o {
+            color: #3498db;
+        }
+        
+        .water-x {
+            color: #e74c3c;
+        }
+        
+        input[type="number"] {
+            width: 60px;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        input[type="number"]:disabled {
+            background: #f0f0f0 !important;
+            cursor: not-allowed !important;
+            color: #999;
+        }
+        
+        .result-cell {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+        
+        .prepare-cell {
+            background: #e8f5e9;
+            font-weight: 700;
+            color: #2e7d32;
+            font-size: 15px;
+        }
+        
+        .special-note {
+            font-size: 10px;
+            color: #e67e22;
+            font-weight: 500;
+            white-space: pre-line;
+        }
+        
+        .memo-cell {
+            text-align: left;
+            font-size: 11px;
+            color: #333;
+            min-width: 200px;
+            max-width: 300px;
+            vertical-align: top;
+        }
+        
+        .memo-cell textarea {
+            width: 100%;
+            min-height: 60px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 6px;
+            font-size: 11px;
+            font-family: inherit;
+            resize: vertical;
+            line-height: 1.4;
+        }
+        
+        .memo-cell textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h2 {
+            font-size: 20px;
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .setting-item {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .setting-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .setting-item h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .setting-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+        
+        .setting-field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .setting-field label {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .setting-field textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: inherit;
+            resize: vertical;
+        }
+        
+        .setting-field textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .highlight-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .highlight-box h3 {
+            color: #856404;
+            margin-bottom: 8px;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+        
+        .close-btn:hover {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .delete-row-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        
+        .delete-row-btn:hover {
+            background: #c0392b;
+        }
+        
+        .info-banner {
+            background: #e8f5e9;
+            border: 1px solid #4caf50;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 12px;
+            color: #2e7d32;
+        }
+        
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            
+            #printArea, #printArea * {
+                visibility: visible;
+            }
+            
+            #printArea {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+        }
+        
+        .print-content {
+            font-family: "Courier New", monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .print-header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px dashed #333;
+            padding-bottom: 10px;
+        }
+        
+        .print-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px dotted #ccc;
+        }
+        
+        .print-footer {
+            margin-top: 20px;
+            text-align: center;
+            border-top: 2px dashed #333;
+            padding-top: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 5px;
+            }
+            
+            .header h1 {
+                font-size: 20px;
+            }
+            
+            .section {
+                padding: 15px 10px;
+            }
+            
+            input[type="number"] {
+                width: 50px;
+                padding: 4px;
+                font-size: 12px;
+            }
+            
+            th, td {
+                padding: 6px 4px;
+                font-size: 11px;
+            }
+            
+            .header-controls {
+                width: 100%;
+            }
+            
+            .btn {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+            
+            .calc-mode-selector {
+                width: 100%;
+            }
+            
+            .calc-mode-btn {
+                flex: 1;
+                font-size: 11px;
+                padding: 6px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <div id="printArea" style="display: none;"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        const DEFAULT_MEAT_ITEMS = [
+            { id: 1, name: "오믈렛", note: "1팩=2캠", waterTray: "X", shelfLife: "소분3", middle: 1, closing: 2, specialNote: "", memo: "", settings: {} },
+            { id: 2, name: "베이컨 비츠", note: "", waterTray: "X", shelfLife: "소분3", middle: 0, closing: 0, specialNote: "", memo: "쟁반해동", settings: {} },
+            { id: 3, name: "스프", note: "", waterTray: "X", shelfLife: "소분2", middle: 4, closing: 0, specialNote: "", memo: "랍스터 문짝 3, 햄 3, 로티세리 1, 베이컨 1, 스테이크2, 터키 2, 살라미 2, 페퍼로니 2, 마요새거 1", settings: {} },
+            { id: 4, name: "아보카도", note: "2팩기준", waterTray: "X", shelfLife: "소분1", middle: 2, closing: 3, specialNote: "토,일 (아침 미들) +1", memo: "", settings: {saturday: 1, sunday: 1, holiday: 1} },
+            { id: 5, name: "스테이크", note: "", waterTray: "O", shelfLife: "소분2", middle: 3, closing: 3, specialNote: "", memo: "", settings: {} },
+            { id: 6, name: "데리야끼", note: "", waterTray: "O", shelfLife: "소분2", middle: 0, closing: 1, specialNote: "토요일 아침만 +1", memo: "금토,공휴일전일 주말해동 있음", settings: {saturday: 1} },
+            { id: 7, name: "로스트치킨", note: "", waterTray: "O", shelfLife: "소분2", middle: 2, closing: 2, specialNote: "", memo: "해동냉 [오른쪽,위쪽 먼저사용]", settings: {} },
+            { id: 8, name: "스파이쉬림프", note: "30마리 시즈닝 35g", waterTray: "O", shelfLife: "소분1", middle: 0, closing: 0, specialNote: "", memo: "왼쪽-위", settings: {} },
+            { id: 9, name: "터키", note: "", waterTray: "O", shelfLife: "소분2", middle: 2, closing: 2, specialNote: "", memo: "햄(1)", settings: {} },
+            { id: 10, name: "햄", note: "", waterTray: "O", shelfLife: "소분2", middle: 2, closing: 3, specialNote: "", memo: "풀드포크", settings: {} },
+            { id: 11, name: "베이컨", note: "1팩=2캠", waterTray: "X", shelfLife: "소분5", middle: 2, closing: 2, specialNote: "", memo: "안창살", settings: {} },
+            { id: 12, name: "살라미", note: "", waterTray: "X", shelfLife: "소분3", middle: 2, closing: 2, specialNote: "", memo: "왼쪽-아래", settings: {} },
+            { id: 13, name: "페퍼로니", note: "", waterTray: "X", shelfLife: "소분3", middle: 2, closing: 2, specialNote: "", memo: "콘스프", settings: {} },
+            { id: 14, name: "참치", note: "", waterTray: "X", shelfLife: "소분3", middle: 1, closing: 1, specialNote: "토 아침만 2팩 1캠", memo: "햄(2)", settings: {saturday: 1} },
+            { id: 15, name: "에그마요", note: "토,일 2개씩 추가", waterTray: "X", shelfLife: "소분3", middle: 5, closing: 5, specialNote: "토 아침만 +2", memo: "버섯", settings: {saturday: 2, sunday: 2} },
+            { id: 16, name: "치즈", note: "차감 필수", waterTray: "O", shelfLife: "소분5", middle: 1, closing: 2, specialNote: "", memo: "3번 냉장고 문짝", settings: {} },
+            { id: 17, name: "슈레드", note: "차감 필수", waterTray: "X", shelfLife: "소분5", middle: 2, closing: 3, specialNote: "", memo: "왼쪽", settings: {} },
+            { id: 18, name: "모차렐라", note: "차감 표시 필수", waterTray: "X", shelfLife: "소분5", middle: 2, closing: 2, specialNote: "", memo: "냉장참치, 또띠아(평일)", settings: {} },
+            { id: 19, name: "풀드포크", note: "2팩 1캠", waterTray: "O", shelfLife: "소분2", middle: 2, closing: 2, specialNote: "", memo: "로스트치킨", settings: {} },
+            { id: 20, name: "랍스터", note: "", waterTray: "O", shelfLife: "소분2", middle: 0, closing: 1, specialNote: "", memo: "★아래 왼쪽: 로스트치킨1", settings: {} },
+            { id: 21, name: "로티세리", note: "1팩 1캠", waterTray: "O", shelfLife: "소분2", middle: 2, closing: 2, specialNote: "", memo: "2번 냉장고 문짝", settings: {} },
+            { id: 22, name: "피클", note: "1통 6캠, 차감 필수", waterTray: "O", shelfLife: "소분5", middle: 2, closing: 2, specialNote: "", memo: "왼쪽", settings: {} },
+            { id: 23, name: "올리브", note: "차감 필수", waterTray: "O", shelfLife: "소분5", middle: 2, closing: 3, specialNote: "", memo: "쉬림프", settings: {} },
+            { id: 24, name: "할라피뇨", note: "1통 5캠, 차감 필수", waterTray: "O", shelfLife: "소분5", middle: 2, closing: 2, specialNote: "", memo: "쉬림프", settings: {} },
+            { id: 25, name: "new 머시룸", note: "", waterTray: "O", shelfLife: "소분1", middle: 1, closing: 2, specialNote: "", memo: "새우 계산은 포스 컴퓨터 참고", settings: {} },
+            { id: 26, name: "안창살", note: "2팩 1캠", waterTray: "O", shelfLife: "소분2", middle: 2, closing: 2, specialNote: "", memo: "", settings: {} },
+            { id: 27, name: "쉬림프", note: "", waterTray: "O", shelfLife: "소분1.5", middle: 2, closing: 2, specialNote: "", memo: "", settings: {} },
+        ];
+        
+        const DEFAULT_VEG_ITEMS = [
+            { id: 101, name: "양상추", waterTray: "X", shelfLife: 2, middle: 0, closing: 0, specialNote: "", stockNote: "낱개기준", settings: {} },
+            { id: 102, name: "피망", waterTray: "O", shelfLife: 2, middle: 3, closing: 5, specialNote: "목요일 당일마감+1", stockNote: "비닐기준", settings: {thursday: 1} },
+            { id: 103, name: "오이", waterTray: "O", shelfLife: 2, middle: 3, closing: 4, specialNote: "목요일 당일마감+1", stockNote: "비닐기준", settings: {thursday: 1} },
+            { id: 104, name: "토마토", waterTray: "O", shelfLife: 2, middle: 4, closing: 11, specialNote: "금요일 당일마감+1", stockNote: "박스기준", settings: {friday: 1} },
+            { id: 105, name: "양파", waterTray: "O", shelfLife: 2, middle: 3, closing: 3, specialNote: "목요일 당일마감+1", stockNote: "비닐기준", settings: {thursday: 1} },
+        ];
+        
+        function MaterialChart() {
+            const [currentDate, setCurrentDate] = useState(new Date());
+            const [isHolidayTomorrow, setIsHolidayTomorrow] = useState(false);
+            const [isHolidayToday, setIsHolidayToday] = useState(false);
+            const [showSettings, setShowSettings] = useState(false);
+            const [editingItem, setEditingItem] = useState(null);
+            const [calculationMode, setCalculationMode] = useState(() => {
+                return localStorage.getItem('calculationMode') || 'all';
+            });
+            const [isLocked, setIsLocked] = useState(() => {
+                return localStorage.getItem('isLocked') === 'true';
+            });
+            const [meatMemoNote, setMeatMemoNote] = useState(() => {
+                return localStorage.getItem('meatMemoNote') || '';
+            });
+            const [authorName, setAuthorName] = useState(() => {
+                return localStorage.getItem('authorName') || '';
+            });
+            
+            const [meatData, setMeatData] = useState(() => {
+                const saved = localStorage.getItem('meatData');
+                if (saved) {
+                    return JSON.parse(saved);
+                }
+                return DEFAULT_MEAT_ITEMS.map(item => ({
+                    ...item,
+                    unit: 0,
+                    backFridge: 0,
+                    mainFridge: 0
+                }));
+            });
+            
+            const [vegData, setVegData] = useState(() => {
+                const saved = localStorage.getItem('vegData');
+                if (saved) {
+                    return JSON.parse(saved);
+                }
+                return DEFAULT_VEG_ITEMS.map(item => ({
+                    ...item,
+                    unit: 0,
+                    backFridge: 0,
+                    mainFridge: 0
+                }));
+            });
+            
+            useEffect(() => {
+                localStorage.setItem('meatData', JSON.stringify(meatData));
+            }, [meatData]);
+            
+            useEffect(() => {
+                localStorage.setItem('vegData', JSON.stringify(vegData));
+            }, [vegData]);
+            
+            useEffect(() => {
+                localStorage.setItem('authorName', authorName);
+            }, [authorName]);
+            
+            useEffect(() => {
+                localStorage.setItem('calculationMode', calculationMode);
+            }, [calculationMode]);
+            
+            useEffect(() => {
+                localStorage.setItem('isLocked', isLocked);
+            }, [isLocked]);
+            
+            useEffect(() => {
+                localStorage.setItem('meatMemoNote', meatMemoNote);
+            }, [meatMemoNote]);
+            
+            const getDayOfWeek = () => {
+                const days = ['일', '월', '화', '수', '목', '금', '토'];
+                return days[currentDate.getDay()];
+            };
+            
+            const getFormattedDate = () => {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth() + 1;
+                const date = currentDate.getDate();
+                return `${year}년 ${month}월 ${date}일 (${getDayOfWeek()})`;
+            };
+            
+            const getTomorrowDay = () => {
+                const tomorrow = new Date(currentDate);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+                return days[tomorrow.getDay()];
+            };
+            
+            const getTomorrowDayKorean = () => {
+                const tomorrow = new Date(currentDate);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const days = ['일', '월', '화', '수', '목', '금', '토'];
+                return days[tomorrow.getDay()];
+            };
+            
+            const isTomorrowWeekend = () => {
+                const tomorrowDay = getTomorrowDay();
+                return tomorrowDay === 'saturday' || tomorrowDay === 'sunday';
+            };
+            
+            const getTodayDay = () => {
+                const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+                return days[currentDate.getDay()];
+            };
+            
+            const updateMeatItem = (index, field, value) => {
+                const newData = [...meatData];
+                if (field === 'name' || field === 'note') {
+                    newData[index][field] = value;
+                } else {
+                    newData[index][field] = value === '' ? 0 : Number(value);
+                }
+                setMeatData(newData);
+            };
+            
+            const updateVegItem = (index, field, value) => {
+                const newData = [...vegData];
+                if (field === 'name' || field === 'note') {
+                    newData[index][field] = value;
+                } else {
+                    newData[index][field] = value === '' ? 0 : Number(value);
+                }
+                setVegData(newData);
+            };
+            
+            const calculateTotal = (item) => {
+                return item.unit + item.backFridge + item.mainFridge;
+            };
+            
+            const getAdjustedAmount = (item, type) => {
+                const tomorrowDay = getTomorrowDay();
+                let baseAmount = item[type] || 0;
+                let adjustment = 0;
+                
+                // 내일 기준 설정 적용 (예: 내일이 월요일이면 monday 설정 적용)
+                if (item.settings && item.settings[tomorrowDay]) {
+                    adjustment += item.settings[tomorrowDay];
+                }
+                
+                // 오늘이 공휴일이면 today_holiday 설정 적용
+                if (isHolidayToday && item.settings && item.settings.today_holiday) {
+                    adjustment += item.settings.today_holiday;
+                }
+                
+                // 내일이 공휴일이면 holiday 설정 적용
+                if (isHolidayTomorrow && item.settings && item.settings.holiday) {
+                    adjustment += item.settings.holiday;
+                }
+                
+                return baseAmount + adjustment;
+            };
+            
+            const calculatePrepare = (item) => {
+                const adjustedMiddle = getAdjustedAmount(item, 'middle');
+                const adjustedClosing = getAdjustedAmount(item, 'closing');
+                const total = calculateTotal(item);
+                
+                let need = 0;
+                if (calculationMode === 'middle') {
+                    need = adjustedMiddle;
+                } else if (calculationMode === 'closing') {
+                    need = adjustedClosing;
+                } else {
+                    need = adjustedMiddle + adjustedClosing;
+                }
+                
+                // 토마토는 특별 계산식: ((필요량) - 합계) / 2 올림
+                if (item.name === '토마토') {
+                    const result = (need - total) / 2;
+                    return result > 0 ? Math.ceil(result) : 0;
+                }
+                
+                const result = need - total;
+                return result > 0 ? result : 0;
+            };
+            
+            const addNewItem = (type) => {
+                const newId = Date.now();
+                const newItem = {
+                    id: newId,
+                    name: "새 품목",
+                    note: "",
+                    waterTray: "O",
+                    shelfLife: type === 'meat' ? "소분2" : 2,
+                    middle: 0,
+                    closing: 0,
+                    specialNote: "",
+                    memo: type === 'meat' ? "" : undefined,
+                    stockNote: type === 'veg' ? "" : undefined,
+                    settings: {},
+                    unit: 0,
+                    backFridge: 0,
+                    mainFridge: 0
+                };
+                
+                if (type === 'meat') {
+                    setMeatData([...meatData, newItem]);
+                } else {
+                    setVegData([...vegData, newItem]);
+                }
+            };
+            
+            const deleteItem = (type, index) => {
+                if (confirm('이 품목을 삭제하시겠습니까?')) {
+                    if (type === 'meat') {
+                        setMeatData(meatData.filter((_, i) => i !== index));
+                    } else {
+                        setVegData(vegData.filter((_, i) => i !== index));
+                    }
+                }
+            };
+            
+            const resetAll = () => {
+                if (confirm('모든 입력값을 초기화하시겠습니까?')) {
+                    setMeatData(meatData.map(item => ({
+                        ...item,
+                        unit: 0,
+                        backFridge: 0,
+                        mainFridge: 0
+                    })));
+                    setVegData(vegData.map(item => ({
+                        ...item,
+                        unit: 0,
+                        backFridge: 0,
+                        mainFridge: 0
+                    })));
+                }
+            };
+            
+            const exportToExcel = () => {
+                const meatWs = XLSX.utils.json_to_sheet(
+                    meatData.map(item => ({
+                        '품목': item.name,
+                        '메모': item.note,
+                        '물받침': item.waterTray,
+                        '유통기한': item.shelfLife,
+                        '미들': getAdjustedAmount(item, 'middle'),
+                        '마감': getAdjustedAmount(item, 'closing'),
+                        '유니트': item.unit,
+                        '빽냉': item.backFridge,
+                        '냉장고': item.mainFridge,
+                        '합계': calculateTotal(item),
+                        '준비량': calculatePrepare(item)
+                    }))
+                );
+                
+                const vegWs = XLSX.utils.json_to_sheet(
+                    vegData.map(item => ({
+                        '품목': item.name,
+                        '물받침': item.waterTray,
+                        '유통기한': item.shelfLife,
+                        '미들': getAdjustedAmount(item, 'middle'),
+                        '마감': getAdjustedAmount(item, 'closing'),
+                        '유니트': item.unit,
+                        '빽냉': item.backFridge,
+                        '냉장고': item.mainFridge,
+                        '합계': calculateTotal(item),
+                        '준비량': calculatePrepare(item),
+                        '재고기준': item.stockNote
+                    }))
+                );
+                
+                // 참고 메모 시트
+                const memoWs = XLSX.utils.aoa_to_sheet([
+                    ['📦 참고 (냉장 재료 위치 정보)'],
+                    [''],
+                    [meatMemoNote]
+                ]);
+                
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, meatWs, "고기재료");
+                XLSX.utils.book_append_sheet(wb, vegWs, "야채");
+                XLSX.utils.book_append_sheet(wb, memoWs, "참고메모");
+                
+                const fileName = `재료준비차트_${currentDate.getFullYear()}${String(currentDate.getMonth()+1).padStart(2,'0')}${String(currentDate.getDate()).padStart(2,'0')}.xlsx`;
+                XLSX.writeFile(wb, fileName);
+            };
+            
+            const printPrepareList = () => {
+                const allItems = [...meatData, ...vegData];
+                const itemsToPrepare = allItems.filter(item => calculatePrepare(item) > 0);
+                
+                const modeText = calculationMode === 'middle' ? '미들 계산' : 
+                                calculationMode === 'closing' ? '마감 계산' : '전체 계산';
+                
+                const printContent = `
+                    <div class="print-content">
+                        <div class="print-header">
+                            <h2>재료 준비 목록</h2>
+                            <p>${getFormattedDate()}</p>
+                            ${authorName ? `<p><strong>작성자: ${authorName}</strong></p>` : ''}
+                            <p><strong>계산 모드: ${modeText}</strong></p>
+                            ${isHolidayToday ? '<p>⚠️ 오늘은 공휴일</p>' : ''}
+                            ${isHolidayTomorrow ? '<p>⚠️ 내일은 공휴일</p>' : ''}
+                            ${isTomorrowWeekend() ? `<p>📅 내일은 ${getTomorrowDayKorean()}요일(주말)입니다</p>` : ''}
+                        </div>
+                        ${itemsToPrepare.map(item => `
+                            <div class="print-item">
+                                <span>${item.name}</span>
+                                <span>${calculatePrepare(item)}</span>
+                            </div>
+                        `).join('')}
+                        <div class="print-footer">
+                            <p>총 ${itemsToPrepare.length}개 품목</p>
+                        </div>
+                    </div>
+                `;
+                
+                const printArea = document.getElementById('printArea');
+                printArea.innerHTML = printContent;
+                printArea.style.display = 'block';
+                window.print();
+                printArea.style.display = 'none';
+            };
+            
+            const openSettings = (item, type, index) => {
+                setEditingItem({ item, type, index });
+                setShowSettings(true);
+            };
+            
+            const saveSettings = (updatedItem) => {
+                if (editingItem) {
+                    const { type, index } = editingItem;
+                    if (type === 'meat') {
+                        const newData = [...meatData];
+                        newData[index] = updatedItem;
+                        setMeatData(newData);
+                    } else {
+                        const newData = [...vegData];
+                        newData[index] = updatedItem;
+                        setVegData(newData);
+                    }
+                }
+                setShowSettings(false);
+                setEditingItem(null);
+            };
+            
+            return (
+                <div className="container">
+                    <div className="header">
+                        <div className="header-top">
+                            <h1>🍖 재료 준비 차트</h1>
+                            <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
+                                <input 
+                                    type="text"
+                                    value={authorName}
+                                    onChange={(e) => setAuthorName(e.target.value)}
+                                    placeholder="작성자 이름"
+                                    style={{
+                                        padding: '8px 12px',
+                                        borderRadius: '6px',
+                                        border: '2px solid rgba(255,255,255,0.3)',
+                                        background: 'rgba(255,255,255,0.9)',
+                                        fontSize: '14px',
+                                        fontWeight: '600',
+                                        width: '150px',
+                                        color: '#667eea'
+                                    }}
+                                />
+                                <div className="header-date">{getFormattedDate()}</div>
+                            </div>
+                        </div>
+                        
+                        <div className="header-controls">
+                            <div className="calc-mode-selector">
+                                <button 
+                                    className={`calc-mode-btn ${calculationMode === 'middle' ? 'active' : ''}`}
+                                    onClick={() => setCalculationMode('middle')}
+                                >
+                                    미들 계산
+                                </button>
+                                <button 
+                                    className={`calc-mode-btn ${calculationMode === 'closing' ? 'active' : ''}`}
+                                    onClick={() => setCalculationMode('closing')}
+                                >
+                                    마감 계산
+                                </button>
+                                <button 
+                                    className={`calc-mode-btn ${calculationMode === 'all' ? 'active' : ''}`}
+                                    onClick={() => setCalculationMode('all')}
+                                >
+                                    전체 (미들+마감)
+                                </button>
+                            </div>
+                            
+                            <button 
+                                className={`btn ${isLocked ? 'btn-danger' : 'btn-secondary'}`}
+                                onClick={() => setIsLocked(!isLocked)}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '5px'
+                                }}
+                            >
+                                {isLocked ? '🔒 미들/마감 잠금' : '🔓 미들/마감 해제'}
+                            </button>
+                            
+                            <label className="holiday-check">
+                                <input 
+                                    type="checkbox" 
+                                    checked={isHolidayToday}
+                                    onChange={(e) => setIsHolidayToday(e.target.checked)}
+                                />
+                                오늘은 공휴일
+                            </label>
+                            
+                            <label className="holiday-check">
+                                <input 
+                                    type="checkbox" 
+                                    checked={isHolidayTomorrow}
+                                    onChange={(e) => setIsHolidayTomorrow(e.target.checked)}
+                                />
+                                내일은 공휴일
+                            </label>
+                            
+                            {isTomorrowWeekend() && (
+                                <div style={{
+                                    background: '#e3f2fd',
+                                    border: '2px solid #2196f3',
+                                    padding: '8px 16px',
+                                    borderRadius: '6px',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    color: '#1565c0',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}>
+                                    📅 내일은 {getTomorrowDayKorean()}요일(주말)입니다. 주말 설정 값이 자동 적용됩니다.
+                                </div>
+                            )}
+                            
+                            <button className="btn btn-secondary" onClick={exportToExcel}>
+                                📥 엑셀 저장
+                            </button>
+                            
+                            <button className="btn btn-secondary" onClick={printPrepareList}>
+                                🖨️ 준비량 인쇄
+                            </button>
+                            
+                            <button className="btn btn-danger" onClick={resetAll}>
+                                🔄 전체 초기화
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div className="section">
+                        <div className="section-header">
+                            <div className="section-title">고기 & 재료</div>
+                            <button className="btn btn-success" onClick={() => addNewItem('meat')}>
+                                ➕ 품목 추가
+                            </button>
+                        </div>
+                        
+                        <div className="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>품목</th>
+                                        <th title="재료 특성 설명">메모<br/><small style={{fontSize: '9px', fontWeight: 'normal'}}>(재료 특성)</small></th>
+                                        <th>물받침</th>
+                                        <th>유통기한</th>
+                                        <th>미들</th>
+                                        <th>마감</th>
+                                        <th>유니트</th>
+                                        <th>빽냉</th>
+                                        <th>냉장고</th>
+                                        <th>합계</th>
+                                        <th style={{background: '#e8f5e9'}}>준비량</th>
+                                        <th className="no-print">설정</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {meatData.map((item, idx) => {
+                                        const total = calculateTotal(item);
+                                        const prepare = calculatePrepare(item);
+                                        const adjustedMiddle = getAdjustedAmount(item, 'middle');
+                                        const adjustedClosing = getAdjustedAmount(item, 'closing');
+                                        
+                                        return (
+                                            <tr key={item.id}>
+                                                <td className="item-name">
+                                                    <input 
+                                                        type="text"
+                                                        value={item.name}
+                                                        onChange={(e) => updateMeatItem(idx, 'name', e.target.value)}
+                                                    />
+                                                </td>
+                                                <td className="note-cell">
+                                                    <input 
+                                                        type="text"
+                                                        value={item.note || ''}
+                                                        onChange={(e) => updateMeatItem(idx, 'note', e.target.value)}
+                                                        placeholder="메모"
+                                                    />
+                                                </td>
+                                                <td className={`water-tray ${item.waterTray === 'O' ? 'water-o' : 'water-x'}`}>
+                                                    {item.waterTray}
+                                                </td>
+                                                <td>{item.shelfLife}</td>
+                                                <td>
+                                                    <input 
+                                                        type="number" 
+                                                        min="0"
+                                                        value={item.middle}
+                                                        onChange={(e) => updateMeatItem(idx, 'middle', e.target.value)}
+                                                        disabled={isLocked}
+                                                        style={{
+                                                            background: isLocked ? '#f0f0f0' : (adjustedMiddle !== item.middle ? '#fff3cd' : 'white'),
+                                                            cursor: isLocked ? 'not-allowed' : 'text'
+                                                        }}
+                                                        title={isLocked ? '잠금 상태' : (adjustedMiddle !== item.middle ? `조정값: ${adjustedMiddle}` : '')}
+                                                    />
+                                                </td>
+                                                <td>
+                                                    <input 
+                                                        type="number" 
+                                                        min="0"
+                                                        value={item.closing}
+                                                        onChange={(e) => updateMeatItem(idx, 'closing', e.target.value)}
+                                                        disabled={isLocked}
+                                                        style={{
+                                                            background: isLocked ? '#f0f0f0' : (adjustedClosing !== item.closing ? '#fff3cd' : 'white'),
+                                                            cursor: isLocked ? 'not-allowed' : 'text'
+                                                        }}
+                                                        title={isLocked ? '잠금 상태' : (adjustedClosing !== item.closing ? `조정값: ${adjustedClosing}` : '')}
+                                                    />
+                                                    />
+                                                </td>
+                                                <td>
+                                                    <input 
+                                                        type="number" 
+                                                        min="0"
+                                                        value={item.unit || ''}
+                                                        onChange={(e) => updateMeatItem(idx, 'unit', e.target.value)}
+                                                    />
+                                                </td>
+                                                <td>
+                                                    <input 
+                                                        type="number" 
+                                                        min="0"
+                                                        value={item.backFridge || ''}
+                                                        onChange={(e) => updateMeatItem(idx, 'backFridge', e.target.value)}
+                                                    />
+                                                </td>
+                                                <td>
+                                                    <input 
+                                                        type="number" 
+                                                        min="0"
+                                                        value={item.mainFridge || ''}
+                                                        onChange={(e) => updateMeatItem(idx, 'mainFridge', e.target.value)}
+                                                    />
+                                                </td>
+                                                <td className="result-cell">{total}</td>
+                                                <td className="prepare-cell">{prepare}</td>
+                                                <td className="no-print">
+                                                    <button 
+                                                        className="btn btn-primary" 
+                                                        style={{fontSize: '11px', padding: '4px 8px'}}
+                                                        onClick={() => openSettings(item, 'meat', idx)}
+                                                    >
+                                                        ⚙️
+                                                    </button>
+                                                    <br/>
+                                                    <button 
+                                                        className="delete-row-btn"
+                                                        style={{marginTop: '4px'}}
+                                                        onClick={() => deleteItem('meat', idx)}
+                                                    >
+                                                        삭제
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div style={{marginTop: '20px', padding: '15px', background: '#fff9e6', borderRadius: '8px', border: '2px solid #ffc107'}}>
+                            <div style={{display: 'flex', alignItems: 'center', marginBottom: '10px'}}>
+                                <h3 style={{margin: 0, fontSize: '16px', color: '#856404'}}>📦 참고 (냉장 재료 위치 정보)</h3>
+                                <div style={{
+                                    marginLeft: '10px',
+                                    fontSize: '12px',
+                                    color: '#856404',
+                                    background: '#fff3cd',
+                                    padding: '4px 10px',
+                                    borderRadius: '4px'
+                                }}>
+                                    다른 냉장 재료들의 위치를 한 곳에 정리하세요
+                                </div>
+                            </div>
+                            <textarea
+                                value={meatMemoNote}
+                                onChange={(e) => setMeatMemoNote(e.target.value)}
+                                placeholder="예시:&#10;- 쟁반해동&#10;- 랍스터 문짝 3, 햄 3, 로티세리 1, 베이컨 1&#10;- 해동냉 [오른쪽,위쪽 먼저사용]&#10;- 3번 냉장고 문짝&#10;- 왼쪽-위, 왼쪽-아래"
+                                style={{
+                                    width: '100%',
+                                    minHeight: '200px',
+                                    border: '1px solid #ddd',
+                                    borderRadius: '6px',
+                                    padding: '12px',
+                                    fontSize: '13px',
+                                    fontFamily: 'inherit',
+                                    resize: 'vertical',
+                                    lineHeight: '1.6'
+                                }}
+                            />
+                        </div>
+                    </div>
+                    
+                    <div className="section">
+                        <div className="section-header">
+                            <div className="section-title">야채</div>
+                            <button className="btn btn-success" onClick={() => addNewItem('veg')}>
+                                ➕ 품목 추가
+                            </button>
+                        </div>
+                        
+                        <div className="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>품목</th>
+                                        <th>물받침</th>
+                                        <th>유통기한</th>
+                                        <th>미들</th>
+                                        <th>마감</th>
+                                        <th>유니트</th>
+                                        <th>빽냉</th>
+                                        <th>냉장고</th>
+                                        <th>합계</th>
+                                        <th style={{background: '#e8f5e9'}}>준비량</th>
+                                        <th>재고기준</th>
+                                        <th className="no-print">설정</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {vegData.map((item, idx) => {
+                                        const total = calculateTotal(item);
+                                        const prepare = calculatePrepare(item);
+                                        const adjustedMiddle = getAdjustedAmount(item, 'middle');
+                                        const adjustedClosing = getAdjustedAmount(item, 'closing');
+                                        
+                                        return (
+                                            <tr key={item.id}>
+                                                <td className="item-name">
+                                                    <input 
+                                                        type="text"
+                                                        value={item.name}
+                                                        onChange={(e) => updateVegItem(idx, 'name', e.target.value)}
+                                                    />
+                                                </td>
+                                                <td className={`water-tray ${item.waterTray === 'O' ? 'water-o' : 'water-x'}`}>
+                                                    {item.waterTray}
+                                                </td>
+                                                <td>{item.shelfLife}</td>
+                                                <td>
+                                                    <input 
+                                                        type="number" 
+                                                        min="0"
+                                                        value={item.middle}
+                                                        onChange={(e) => updateVegItem(idx, 'middle', e.target.value)}
+                                                        disabled={isLocked}
+                                                        style={{
+                                                            background: isLocked ? '#f0f0f0' : (adjustedMiddle !== item.middle ? '#fff3cd' : 'white'),
+                                                            cursor: isLocked ? 'not-allowed' : 'text'
+                                                        }}
+                                                        title={isLocked ? '잠금 상태' : (adjustedMiddle !== item.middle ? `조정값: ${adjustedMiddle}` : '')}
+                                                    />
+                                                </td>
+                                                <td>
+                                                    <input 
+                                                        type="number" 
+                                                        min="0"
+                                                        value={item.closing}
+                                                        onChange={(e) => updateVegItem(idx, 'closing', e.target.value)}
+                                                        disabled={isLocked}
+                                                        style={{
+                                                            background: isLocked ? '#f0f0f0' : (adjustedClosing !== item.closing ? '#fff3cd' : 'white'),
+                                                            cursor: isLocked ? 'not-allowed' : 'text'
+                                                        }}
+                                                        title={isLocked ? '잠금 상태' : (adjustedClosing !== item.closing ? `조정값: ${adjustedClosing}` : '')}
+                                                    />
+                                                </td>
+                                                <td>
+                                                    <input 
+                                                        type="number" 
+                                                        min="0"
+                                                        value={item.unit || ''}
+                                                        onChange={(e) => updateVegItem(idx, 'unit', e.target.value)}
+                                                    />
+                                                </td>
+                                                <td>
+                                                    <input 
+                                                        type="number" 
+                                                        min="0"
+                                                        value={item.backFridge || ''}
+                                                        onChange={(e) => updateVegItem(idx, 'backFridge', e.target.value)}
+                                                    />
+                                                </td>
+                                                <td>
+                                                    <input 
+                                                        type="number" 
+                                                        min="0"
+                                                        value={item.mainFridge || ''}
+                                                        onChange={(e) => updateVegItem(idx, 'mainFridge', e.target.value)}
+                                                    />
+                                                </td>
+                                                <td className="result-cell">{total}</td>
+                                                <td className="prepare-cell">{prepare}</td>
+                                                <td className="note-cell">{item.stockNote}</td>
+                                                <td className="no-print">
+                                                    <button 
+                                                        className="btn btn-primary" 
+                                                        style={{fontSize: '11px', padding: '4px 8px'}}
+                                                        onClick={() => openSettings(item, 'veg', idx)}
+                                                    >
+                                                        ⚙️
+                                                    </button>
+                                                    <br/>
+                                                    <button 
+                                                        className="delete-row-btn"
+                                                        style={{marginTop: '4px'}}
+                                                        onClick={() => deleteItem('veg', idx)}
+                                                    >
+                                                        삭제
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    {showSettings && editingItem && (
+                        <SettingsModal 
+                            item={editingItem.item}
+                            onClose={() => {
+                                setShowSettings(false);
+                                setEditingItem(null);
+                            }}
+                            onSave={saveSettings}
+                        />
+                    )}
+                </div>
+            );
+        }
+        
+        function SettingsModal({ item, onClose, onSave }) {
+            const [settings, setSettings] = useState(item.settings || {});
+            const [name, setName] = useState(item.name || '');
+            const [waterTray, setWaterTray] = useState(item.waterTray || 'O');
+            const [shelfLife, setShelfLife] = useState(item.shelfLife || '');
+            const [note, setNote] = useState(item.note || '');
+            const [stockNote, setStockNote] = useState(item.stockNote || '');
+            
+            const updateSetting = (day, value) => {
+                setSettings({
+                    ...settings,
+                    [day]: value === '' ? 0 : Number(value)
+                });
+            };
+            
+            const handleSave = () => {
+                const updatedItem = { 
+                    ...item, 
+                    settings, 
+                    name, 
+                    waterTray, 
+                    shelfLife,
+                    note
+                };
+                if (item.stockNote !== undefined) {
+                    updatedItem.stockNote = stockNote;
+                }
+                onSave(updatedItem);
+            };
+            
+            return (
+                <div className="modal" onClick={onClose}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>⚙️ {item.name} 설정</h2>
+                            <button className="close-btn" onClick={onClose}>×</button>
+                        </div>
+                        
+                        <div className="modal-body">
+                            <div className="setting-item">
+                                <h3>📝 품목 정보</h3>
+                                <div style={{
+                                    background: '#f8f9fa',
+                                    padding: '10px',
+                                    borderRadius: '6px',
+                                    marginBottom: '15px',
+                                    fontSize: '12px',
+                                    color: '#666'
+                                }}>
+                                    <strong>메모</strong>: 재료의 특성 설명 (예: 1팩=2캠, 2팩기준 등)<br/>
+                                    <strong>참고</strong>: 냉장 재료 위치는 테이블 아래 통합 참고란에 작성
+                                </div>
+                                <div className="setting-grid">
+                                    <div className="setting-field">
+                                        <label>품목명</label>
+                                        <input 
+                                            type="text"
+                                            value={name}
+                                            onChange={(e) => setName(e.target.value)}
+                                            placeholder="품목명"
+                                        />
+                                    </div>
+                                    <div className="setting-field">
+                                        <label>메모</label>
+                                        <input 
+                                            type="text"
+                                            value={note}
+                                            onChange={(e) => setNote(e.target.value)}
+                                            placeholder="예: 1팩=2캠"
+                                        />
+                                    </div>
+                                    <div className="setting-field">
+                                        <label>물받침</label>
+                                        <select 
+                                            value={waterTray}
+                                            onChange={(e) => setWaterTray(e.target.value)}
+                                            style={{
+                                                width: '100%',
+                                                padding: '6px',
+                                                border: '1px solid #ddd',
+                                                borderRadius: '4px',
+                                                fontSize: '13px'
+                                            }}
+                                        >
+                                            <option value="O">O (필요)</option>
+                                            <option value="X">X (불필요)</option>
+                                        </select>
+                                    </div>
+                                    <div className="setting-field">
+                                        <label>유통기한</label>
+                                        <input 
+                                            type="text"
+                                            value={shelfLife}
+                                            onChange={(e) => setShelfLife(e.target.value)}
+                                            placeholder="예: 소분2"
+                                        />
+                                    </div>
+                                    {item.stockNote !== undefined && (
+                                        <div className="setting-field">
+                                            <label>재고기준</label>
+                                            <input 
+                                                type="text"
+                                                value={stockNote}
+                                                onChange={(e) => setStockNote(e.target.value)}
+                                                placeholder="예: 비닐기준"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            <div className="highlight-box">
+                                <h3>🎯 공휴일 설정</h3>
+                                <div className="setting-grid">
+                                    <div className="setting-field">
+                                        <label>오늘이 공휴일인 경우</label>
+                                        <input 
+                                            type="number" 
+                                            min="0"
+                                            value={settings.today_holiday || ''}
+                                            onChange={(e) => updateSetting('today_holiday', e.target.value)}
+                                            placeholder="추가 수량"
+                                        />
+                                    </div>
+                                    <div className="setting-field">
+                                        <label>내일이 공휴일인 경우</label>
+                                        <input 
+                                            type="number" 
+                                            min="0"
+                                            value={settings.holiday || ''}
+                                            onChange={(e) => updateSetting('holiday', e.target.value)}
+                                            placeholder="추가 수량"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="setting-item">
+                                <h3>📅 요일별 추가 수량 (내일 기준)</h3>
+                                <div style={{
+                                    background: '#e3f2fd',
+                                    padding: '10px',
+                                    borderRadius: '6px',
+                                    marginBottom: '15px',
+                                    fontSize: '12px',
+                                    color: '#1565c0',
+                                    border: '1px solid #2196f3'
+                                }}>
+                                    ⚠️ <strong>중요:</strong> 요일별 추가는 <strong>"내일"</strong> 기준입니다.<br/>
+                                    예: 월요일 +1 → 오늘이 일요일일 때 자동 적용됨
+                                </div>
+                                <div className="setting-grid">
+                                    <div className="setting-field">
+                                        <label>월요일</label>
+                                        <input 
+                                            type="number" 
+                                            min="0"
+                                            value={settings.monday || ''}
+                                            onChange={(e) => updateSetting('monday', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="setting-field">
+                                        <label>화요일</label>
+                                        <input 
+                                            type="number" 
+                                            min="0"
+                                            value={settings.tuesday || ''}
+                                            onChange={(e) => updateSetting('tuesday', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="setting-field">
+                                        <label>수요일</label>
+                                        <input 
+                                            type="number" 
+                                            min="0"
+                                            value={settings.wednesday || ''}
+                                            onChange={(e) => updateSetting('wednesday', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="setting-field">
+                                        <label>목요일</label>
+                                        <input 
+                                            type="number" 
+                                            min="0"
+                                            value={settings.thursday || ''}
+                                            onChange={(e) => updateSetting('thursday', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="setting-field">
+                                        <label>금요일</label>
+                                        <input 
+                                            type="number" 
+                                            min="0"
+                                            value={settings.friday || ''}
+                                            onChange={(e) => updateSetting('friday', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="setting-field">
+                                        <label>토요일</label>
+                                        <input 
+                                            type="number" 
+                                            min="0"
+                                            value={settings.saturday || ''}
+                                            onChange={(e) => updateSetting('saturday', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="setting-field">
+                                        <label>일요일</label>
+                                        <input 
+                                            type="number" 
+                                            min="0"
+                                            value={settings.sunday || ''}
+                                            onChange={(e) => updateSetting('sunday', e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style={{marginTop: '20px', textAlign: 'right'}}>
+                                <button className="btn btn-secondary" onClick={onClose} style={{marginRight: '10px'}}>
+                                    취소
+                                </button>
+                                <button className="btn btn-primary" onClick={handleSave}>
+                                    저장
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        
+        ReactDOM.render(<MaterialChart />, document.getElementById('root'));
+    </script>
+</body>
+</html>
